@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>音声で答える雑学クイズ</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+    margin: 0 auto;
+    padding: 20px 16px 40px;
+    background: #f5f5f7;
+    color: #1d1d1f;
+    max-width: 560px;
+    min-height: 100vh;
+  }
+  h1 {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 8px 0 16px;
+    text-align: center;
+  }
+  .hint {
+    font-size: 13px;
+    color: #86868b;
+    text-align: center;
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+  .hint strong { color: #0071e3; }
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+  }
+  .header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .genre {
+    font-size: 12px;
+    color: #0071e3;
+    background: #e8f1fe;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-weight: 500;
+  }
+  .score {
+    font-size: 13px;
+    color: #86868b;
+  }
+  .question {
+    font-size: 19px;
+    font-weight: 600;
+    line-height: 1.5;
+    margin: 12px 0 20px;
+    min-height: 60px;
+  }
+  .answer-input {
+    width: 100%;
+    font-family: inherit;
+    font-size: 17px;
+    padding: 14px 16px;
+    border: 2px solid #e5e5ea;
+    border-radius: 12px;
+    background: #fafafa;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+  .answer-input:focus {
+    border-color: #0071e3;
+    background: #fff;
+  }
+  .mic-tip {
+    font-size: 12px;
+    color: #86868b;
+    text-align: center;
+    margin: 8px 0 16px;
+  }
+  .buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  button {
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 500;
+    padding: 14px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.1s, opacity 0.2s;
+  }
+  button:active { transform: scale(0.97); }
+  button:disabled { opacity: 0.4; }
+  .submit-btn {
+    background: #0071e3;
+    color: #fff;
+    font-size: 17px;
+    padding: 16px;
+  }
+  .secondary-buttons {
+    display: flex;
+    gap: 10px;
+  }
+  .secondary-buttons button {
+    flex: 1;
+    background: #f0f0f2;
+    color: #1d1d1f;
+  }
+  .result {
+    font-size: 17px;
+    font-weight: 600;
+    min-height: 26px;
+    text-align: center;
+    margin-top: 16px;
+  }
+  .result.correct { color: #34c759; }
+  .result.wrong { color: #ff3b30; }
+  .result.hint-text { color: #86868b; font-weight: 500; }
+</style>
+</head>
+<body>
+  <h1>🎤 音声で答える雑学クイズ</h1>
+  <p class="hint">
+    入力欄をタップ → キーボードの<strong>🎤マイクボタン</strong>を押して話す
+  </p>
+
+  <div class="card">
+    <div class="header-row">
+      <span class="genre" id="genre">ジャンル</span>
+      <span class="score" id="score">正解 0 / 0</span>
+    </div>
+    <p class="question" id="question">問題をロード中...</p>
+
+    <input
+      type="text"
+      class="answer-input"
+      id="answerInput"
+      placeholder="ここをタップして声で答える"
+      autocomplete="off"
+      autocorrect="off"
+      autocapitalize="off"
+      spellcheck="false"
+    />
+    <p class="mic-tip">↑ キーボード右下の 🎤 を押して話してください</p>
+
+    <div class="buttons">
+      <button class="submit-btn" id="submitBtn">回答する</button>
+      <div class="secondary-buttons">
+        <button id="showBtn">答えを見る</button>
+        <button id="nextBtn">次の問題 →</button>
+      </div>
+    </div>
+
+    <div class="result" id="result">&nbsp;</div>
+  </div>
+
+<script>
+const questions = [
+  {q:"日本で一番高い山は?", a:["富士山","ふじさん","フジサン","フジヤマ"], g:"地理"},
+  {q:"1年は何日?(うるう年を除く)", a:["365","365日","三百六十五"], g:"雑学"},
+  {q:"水の化学式は?", a:["H2O","エイチツーオー","エッチツーオー"], g:"科学"},
+  {q:"アメリカ合衆国の初代大統領は誰?", a:["ワシントン","ジョージワシントン"], g:"歴史"},
+  {q:"世界で一番大きい海洋は?", a:["太平洋","たいへいよう"], g:"地理"},
+  {q:"光の三原色は赤、青と、あと一つは?", a:["緑","みどり","グリーン"], g:"科学"},
+  {q:"ジャイアントパンダの主食は?", a:["笹","竹","ささ","たけ","バンブー"], g:"動物"},
+  {q:"日本の通貨の単位は?", a:["円","えん","エン","yen"], g:"文化"},
+  {q:"太陽系で一番大きい惑星は?", a:["木星","もくせい","ジュピター"], g:"宇宙"},
+  {q:"『ゲルニカ』を描いた画家は?", a:["ピカソ","パブロピカソ"], g:"芸術"},
+  {q:"人間の体で一番大きい臓器は?", a:["皮膚","ひふ"], g:"生物"},
+  {q:"世界で一番話されている母語は?", a:["中国語","ちゅうごくご","マンダリン"], g:"言語"},
+];
+
+let idx = 0, correct = 0, answered = 0;
+let answeredThisQuestion = false;
+
+const $ = id => document.getElementById(id);
+
+function normalize(s){
+  if(!s) return "";
+  return s.toLowerCase()
+    .replace(/[\s。、!?・ー！？「」""'']/g, "")
+    .replace(/[ぁ-ん]/g, c => String.fromCharCode(c.charCodeAt(0) + 0x60));
+}
+
+function load(){
+  const q = questions[idx];
+  $("question").textContent = q.q;
+  $("genre").textContent = q.g;
+  $("score").textContent = `正解 ${correct} / ${answered}`;
+  $("answerInput").value = "";
+  $("result").innerHTML = "&nbsp;";
+  $("result").className = "result";
+  answeredThisQuestion = false;
+}
+
+function check(){
+  if(answeredThisQuestion) return;
+  const text = $("answerInput").value.trim();
+  if(!text) return;
+  const q = questions[idx];
+  const nt = normalize(text);
+  const hit = q.a.some(a => nt.includes(normalize(a)));
+  answered++;
+  answeredThisQuestion = true;
+  if(hit){
+    correct++;
+    $("result").textContent = `○ 正解!(あなたの答え: ${text})`;
+    $("result").className = "result correct";
+  } else {
+    $("result").textContent = `× 不正解 (答え: ${q.a[0]})`;
+    $("result").className = "result wrong";
+  }
+  $("score").textContent = `正解 ${correct} / ${answered}`;
+  $("answerInput").blur();
+}
+
+$("submitBtn").onclick = check;
+$("answerInput").addEventListener("keydown", e => {
+  if(e.key === "Enter") check();
+});
+
+$("nextBtn").onclick = () => {
+  idx = (idx + 1) % questions.length;
+  load();
+  setTimeout(() => $("answerInput").focus(), 100);
+};
+
+$("showBtn").onclick = () => {
+  const q = questions[idx];
+  $("result").textContent = `答え: ${q.a[0]}`;
+  $("result").className = "result hint-text";
+};
+
+load();
+</script>
+</body>
+</html>
